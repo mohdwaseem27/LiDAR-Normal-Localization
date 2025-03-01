@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="robot_model">
+  <xacro:arg name="gpu" default="false"/>
+  <xacro:property name="gpu" value="$(arg gpu)" />
+
+  <link name="base_footprint">
+   <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="base_link_joint" type="fixed">
+    <origin xyz="0 0 0.125" rpy="0 0 0" />
+    <parent link="base_footprint"/>
+    <child link="base_link" />
+  </joint>
+
+  <gazebo reference="base_link">
+    <material>Gazebo/Orange</material>
+  </gazebo>
+  
+  <link name="base_link">
+    <inertial>
+      <mass value="10" />
+      <origin xyz="0 0 -0.125" />
+      <inertia ixx="0.1667" ixy="0.0" ixz="0.0"
+        iyy="0.3333" iyz="0.0"
+        izz="0.4333" />
+    </inertial>
+    <visual>
+      <geometry>
+        <box size="0.6 0.4 0.15" /> 
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.6 0.5 0.25" /> 
+      </geometry>
+    </collision>
+    <surface>
+        <friction>
+          <ode>
+            <mu>0.0</mu>
+            <mu2>0.0</mu2>
+          </ode>
+        </friction>
+    </surface>
+  </link>
+
+  <xacro:macro name="wheel" params="prefix x_offset y_offset">  
+    <gazebo reference="${prefix}">
+      <material>Gazebo/FlatBlack</material>
+    </gazebo>
+    <joint name="${prefix}_joint" type="fixed">
+      <origin xyz="${x_offset} ${y_offset} 0" rpy="0 0 0" />
+      <parent link="base_link"/>
+      <child link="${prefix}" />
+    </joint>
+    <link name="${prefix}">
+      <visual>
+        <origin xyz="0 0 0" rpy="1.57 0 0" />
+        <geometry>
+          <cylinder length="0.05" radius="0.125" />
+        </geometry>
+        <material name="wheel_color">
+          <color rgba="0 0 0 1"/>
+        </material>
+      </visual>
+    </link>
+  </xacro:macro>
+
+  <xacro:wheel prefix="wheel_1" x_offset="0.175" y_offset="-0.225"/>
+  <xacro:wheel prefix="wheel_2" x_offset="0.175" y_offset="0.225"/>
+  <xacro:wheel prefix="wheel_3" x_offset="-0.175" y_offset="0.225"/>
+  <xacro:wheel prefix="wheel_4" x_offset="-0.175" y_offset="-0.225"/>
+
+  <joint name="lidar_mount_post_joint" type="fixed">
+    <origin xyz="0 0 0.875" rpy="0 0 0" />
+    <parent link="base_link"/>
+    <child link="lidar_mount_post" />
+  </joint>
+
+  <gazebo reference="lidar_mount_post">
+    <material>Gazebo/Orange</material>
+  </gazebo>
+
+  <link name="lidar_mount_post">
+    <visual>
+      <origin xyz="0 0 -0.4" rpy="0 0 0" />
+      <geometry>
+        <cylinder length="0.8" radius="0.03" />
+      </geometry>
+    </visual>
+  </link>
+
+  <xacro:include filename="$(find velodyne_description)/urdf/VLP-16.urdf.xacro"/>
+  <xacro:VLP-16 parent="lidar_mount_post" name="rslidar" topic="/rslidar_points" hz="10" samples="1800" min_range="0.2" collision_range="0.1" max_range="30" noise="0.005" gpu="${gpu}">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </xacro:VLP-16>
+
+  <gazebo>
+    <plugin name="object_controller" filename="libgazebo_ros_planar_move.so">
+      <commandTopic>cmd_vel</commandTopic>
+      <odometryTopic>ground_truth_odom</odometryTopic>
+      <odometryFrame>odom</odometryFrame>
+      <odometryRate>20.0</odometryRate>
+      <robotBaseFrame>base_footprint</robotBaseFrame>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin name="ground_truth_pose" filename="libgazebo_ros_p3d.so">
+      <frameName>map</frameName>
+      <bodyName>base_footprint</bodyName>
+      <topicName>ground_truth_pose</topicName>
+      <updateRate>100.0</updateRate>
+    </plugin>
+  </gazebo>
+
+<!--
+-->
+</robot>
